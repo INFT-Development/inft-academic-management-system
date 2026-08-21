@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
 import * as authService from "./auth.service";
-import type { User } from "../../generated/prisma/client";
 import { AppError } from "../../utils/AppError";
 
 

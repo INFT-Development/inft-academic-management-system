@@ -4,6 +4,7 @@ import { loginSchema, registerSchema,refreshSchema } from "./auth.schema";
 import { validate } from "../../middleware/validate.middleware";
 import { authMiddleware } from "../../middleware/auth.middleware";
 import { requireRole } from "../../middleware/role.middleware";
+import {Role} from "../../constants/roles";
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.post(
 router.get(
   "/admin-test",
   authMiddleware,
-  requireRole("ADMIN"),
+  requireRole(Role.ADMIN),
   authController.adminTest
 );
 export default router;

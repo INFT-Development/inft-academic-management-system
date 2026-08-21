@@ -2,7 +2,7 @@ import { supabaseAdmin } from "../../config/supabase";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/AppError";
 import type { User } from "../../generated/prisma/client";
-
+import {Role} from "../../constants/roles";
 export interface RegisterInput {
   email: string;
   password: string;
@@ -60,7 +60,7 @@ export async function registerUser(
       data: {
         id: data.user.id,
         email: normalizedEmail,
-        role: "STUDENT", // Default role, adjust as needed
+        role: Role.STUDENT, // Default role, adjust as needed
       },
     });
 
