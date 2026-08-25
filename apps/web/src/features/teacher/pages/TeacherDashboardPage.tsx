@@ -1,33 +1,26 @@
+import { ChalkboardTeacher } from "@phosphor-icons/react";
+
+import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/states";
+import { useOrganization } from "@/hooks/useOrganization";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 
 export function TeacherDashboardPage() {
-const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { currentMembership } = useOrganization();
+  const { user } = useAuth();
 
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">
-          Teacher Dashboard
-        </h1>
+    <div>
+      <PageHeader
+        title="Dashboard"
+        description={`Welcome, ${user?.email} — ${currentMembership!.organizationName}`}
+      />
 
-        <p className="mt-2 text-muted-foreground">
-          Welcome, {user?.email}
-        </p>
-        <Button
-              onClick={handleLogout}
-              variant="destructive"
-              className="w-full"
-            >
-              Logout
-            </Button>
-      </div>
-    </main>
+      <EmptyState
+        icon={ChalkboardTeacher}
+        title="Academic tools are coming soon"
+        description="Courses, attendance, and grades will appear here once they're available."
+      />
+    </div>
   );
 }

@@ -77,6 +77,12 @@ Generate the Prisma client:
 npx prisma generate
 ```
 
+Seed some demo data:
+
+``` bash
+npm run seed
+```
+
 The current database contains the application `User` model with:
 
 ``` text

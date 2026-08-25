@@ -1,30 +1,22 @@
 import { Navigate, Outlet } from "react-router-dom";
+import type { Role } from "@ams/shared";
 
-import { useAuth } from "@/hooks/useAuth";
-import {Role} from "@/constants/roles";
+import { useOrganization } from "@/hooks/useOrganization";
+import { ForbiddenState } from "@/components/states";
+
 interface RoleGuardProps {
   allowedRoles: Role[];
 }
 
-export function RoleGuard({
-  allowedRoles,
-}: RoleGuardProps) {
-  const { user, isLoading } = useAuth();
+export function RoleGuard({ allowedRoles }: RoleGuardProps) {
+  const { currentMembership } = useOrganization();
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!allowedRoles.includes(user.role as Role)) {
+  if (!currentMembership) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (!allowedRoles.includes(currentMembership.role)) {
+    return <ForbiddenState />;
   }
 
   return <Outlet />;

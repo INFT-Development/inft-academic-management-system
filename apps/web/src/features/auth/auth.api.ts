@@ -1,50 +1,19 @@
 import { apiClient } from "@/api/client";
+import type {
+  ApiSuccess,
+  AuthSession,
+  LoginInput,
+  RegisterInput,
+  User,
+} from "@ams/shared";
 
-export interface User {
-  id: string;
-  email: string;
-  role: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-  };
-}
-
-export interface LoginResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-    accessToken: string;
-    refreshToken: string;
-  };
-}
-
-export interface RefreshResponse {
-  success: boolean;
-  message: string;
-  data: {
-    accessToken: string;
-    refreshToken?: string;
-  };
-}
+export type RegisterResponse = ApiSuccess<{ user: User }>;
+export type LoginResponse = ApiSuccess<AuthSession>;
+export type RefreshResponse = ApiSuccess<AuthSession>;
+export type MeResponse = ApiSuccess<Omit<AuthSession, "accessToken" | "refreshToken">>;
 
 export async function registerUser(
-  data: RegisterRequest,
+  data: RegisterInput,
 ): Promise<RegisterResponse> {
   return apiClient<RegisterResponse>("/auth/register", {
     method: "POST",
@@ -53,11 +22,12 @@ export async function registerUser(
 }
 
 export async function loginUser(
-  data: LoginRequest,
+  data: LoginInput,
 ): Promise<LoginResponse> {
   return apiClient<LoginResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify(data),
+    skipRefresh: true,
   });
 }
 
@@ -72,12 +42,6 @@ export async function refreshToken(
   });
 }
 
-export async function loginWithCredentials(
-  credentials: LoginRequest,
-): Promise<LoginResponse> {
-  return apiClient<LoginResponse>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify(credentials),
-    skipRefresh: true,
-  });
+export async function getCurrentUser(): Promise<MeResponse> {
+  return apiClient<MeResponse>("/auth/me");
 }

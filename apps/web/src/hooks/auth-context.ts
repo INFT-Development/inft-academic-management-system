@@ -1,14 +1,11 @@
-// filepath: d:\Projects\inft-academic-management-system\apps\web\src\features\auth\auth-context.ts
 import { createContext } from "react";
+import type { User, MembershipSummary } from "@ams/shared";
 
-export interface User {
-  id: string;
-  email: string;
-  role: string;
-}
+export type { User, MembershipSummary };
 
 export interface AuthContextValue {
   user: User | null;
+  memberships: MembershipSummary[];
   accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -17,8 +14,10 @@ export interface AuthContextValue {
     accessToken: string,
     refreshToken: string,
     user: User,
+    memberships: MembershipSummary[],
   ) => void;
   refreshSession: () => Promise<boolean>;
+  refreshMemberships: () => Promise<void>;
   logout: () => void;
 }
 

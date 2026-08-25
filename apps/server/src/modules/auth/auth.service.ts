@@ -2,7 +2,8 @@ import { supabaseAdmin } from "../../config/supabase";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/AppError";
 import type { User } from "../../generated/prisma/client";
-import {Role} from "../../constants/roles";
+import type { MembershipSummary } from "@ams/shared";
+
 export interface RegisterInput {
   email: string;
   password: string;
@@ -10,9 +11,7 @@ export interface RegisterInput {
 
 export async function registerUser(
   input: RegisterInput
-): Promise<{  id: string;
-  email: string;
-  role: User["role"];}> {
+): Promise<{ id: string; email: string }> {
   const { email, password } = input;
 
   // Normalize email
@@ -54,21 +53,21 @@ export async function registerUser(
     throw new AppError("Failed to create Supabase user", 500);
   }
 
-  // 3. Create the application user in Prisma
+  // 3. Create the application user in Prisma.
+  // Role is not assigned here — it comes from a Membership, created
+  // separately when the user creates or joins an organization.
   try {
     const user: User = await prisma.user.create({
       data: {
         id: data.user.id,
         email: normalizedEmail,
-        role: Role.STUDENT, // Default role, adjust as needed
       },
     });
 
     return {
-  id: user.id,
-  email: user.email,
-  role: user.role,
-}
+      id: user.id,
+      email: user.email,
+    };
   } catch (error) {
     // Prisma creation failed, so remove the Supabase user
     // to prevent an orphaned authentication account.
@@ -76,6 +75,21 @@ export async function registerUser(
 
     throw error;
   }
+}
+
+async function getMemberships(userId: string): Promise<MembershipSummary[]> {
+  const memberships = await prisma.membership.findMany({
+    where: { userId },
+    include: { organization: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return memberships.map((membership) => ({
+    id: membership.id,
+    organizationId: membership.organizationId,
+    organizationName: membership.organization.name,
+    role: membership.role,
+  }));
 }
 
 export async function loginUser(email: string, password: string) {
@@ -109,8 +123,8 @@ export async function loginUser(email: string, password: string) {
     user: {
       id: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role,
     },
+    memberships: await getMemberships(dbUser.id),
     accessToken: data.session.access_token,
     refreshToken: data.session.refresh_token,
   };
@@ -144,10 +158,28 @@ export async function refreshSession(refreshToken: string) {
     user: {
       id: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role,
     },
+    memberships: await getMemberships(dbUser.id),
     accessToken: data.session.access_token,
     refreshToken: data.session.refresh_token,
+  };
+}
+
+export async function getCurrentUser(userId: string) {
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!dbUser) {
+    throw new AppError("User account not found", 404);
+  }
+
+  return {
+    user: {
+      id: dbUser.id,
+      email: dbUser.email,
+    },
+    memberships: await getMemberships(dbUser.id),
   };
 }
 
