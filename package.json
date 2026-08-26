@@ -1,0 +1,18 @@
+{
+  "name": "academic--management-system",
+  "version": "1.0.0",
+  "description": "A centralized academic management platform for the Information Technology Department, enabling attendance management, academic communication, and student engagement.",
+  "license": "ISC",
+  "type": "commonjs",
+  "main": "index.js",
+  "workspaces": [
+      "apps/*",
+      "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w apps/web",
+    "dev:mobile": "npm run start -w apps/mobile",
+    "dev:server": "npm run dev -w apps/server",
+    "build": "npm run build --workspaces"
+  }
+}

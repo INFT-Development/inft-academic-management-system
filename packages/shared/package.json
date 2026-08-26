@@ -1,0 +1,17 @@
+{
+  "name": "@ams/shared",
+  "version": "1.0.0",
+  "description": "Shared types, constants and Zod schemas for the Academic Management System apps.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b --watch"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
