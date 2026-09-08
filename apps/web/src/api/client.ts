@@ -86,12 +86,18 @@ export async function apiClient<T>(
     token ||
     localStorage.getItem("accessToken");
 
+  // When the body is FormData (multipart file upload), the browser must set
+  // its own Content-Type with the multipart boundary — forcing JSON here
+  // would break the upload.
+  const isFormData =
+    typeof FormData !== "undefined" && fetchOptions.body instanceof FormData;
+
   const response = await fetch(
     `${API_URL}${endpoint}`,
     {
       ...fetchOptions,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
 
         ...(accessToken
           ? {
@@ -166,4 +172,33 @@ export async function apiClient<T>(
   }
 
   return data;
+}
+
+/**
+ * For endpoints that return a raw file (not the {success, message, data}
+ * JSON envelope), e.g. downloadable templates. Does not retry on 401 —
+ * these are infrequent, manual admin actions, so a clear error to retry is
+ * an acceptable simplification over duplicating the refresh-retry flow.
+ */
+export async function apiDownload(endpoint: string): Promise<Blob> {
+  const accessToken = localStorage.getItem("accessToken");
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+
+  if (!response.ok) {
+    let message = `Failed to download file (${response.status})`;
+
+    try {
+      const data = await response.json();
+      message = data.message || message;
+    } catch {
+      // Response wasn't JSON (e.g. the file itself) — keep the generic message.
+    }
+
+    throw new Error(message);
+  }
+
+  return response.blob();
 }

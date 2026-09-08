@@ -1,7 +1,5 @@
-import { Role } from "@ams/shared";
-
 import { PageHeader } from "@/components/layout/PageHeader";
-import { MembersTable } from "@/components/members/MembersTable";
+import { StudentsTable } from "@/features/students/components/StudentsTable";
 import { useOrganization } from "@/hooks/useOrganization";
 
 export function SuperAdminStudentsPage() {
@@ -10,14 +8,9 @@ export function SuperAdminStudentsPage() {
   return (
     <div>
       <PageHeader title="Students" description="Students who have joined your organization." />
-      <MembersTable
+      <StudentsTable
         organizationId={currentMembership!.organizationId}
-        role={Role.STUDENT}
-        roleLabelSingular="student"
-        roleLabelPlural="students"
-        canAdd={false}
-        canChangeRole
-        canRemove
+        importPath="/dashboard/super-admin/students/import"
       />
     </div>
   );

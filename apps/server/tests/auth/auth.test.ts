@@ -9,6 +9,11 @@ jest.mock("../../src/config/prisma", () => ({
     membership: {
       findMany: jest.fn(),
     },
+    student: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
   },
 }));
 
@@ -34,6 +39,7 @@ import { supabaseAdmin } from "../../src/config/supabase";
 const mockFindUnique = prisma.user.findUnique as jest.Mock;
 const mockCreate = prisma.user.create as jest.Mock;
 const mockFindManyMemberships = prisma.membership.findMany as jest.Mock;
+const mockFindManyStudents = prisma.student.findMany as jest.Mock;
 
 const mockCreateUser =
   supabaseAdmin.auth.admin.createUser as jest.Mock;
@@ -59,6 +65,7 @@ describe("Auth API", () => {
 
     // No memberships by default — most tests aren't about org context.
     mockFindManyMemberships.mockResolvedValue([]);
+    mockFindManyStudents.mockResolvedValue([]);
   });
 
   // ============================================================
@@ -360,6 +367,7 @@ describe("Auth API", () => {
           organizationId: "org-1",
           organizationName: "Demo Academy",
           role: "STUDENT",
+          profileComplete: false,
         },
       ],
     });

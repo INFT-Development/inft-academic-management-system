@@ -4,6 +4,7 @@ import { Buildings, CaretUpDown, Check, Plus } from "@phosphor-icons/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -14,9 +15,26 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useOrganization } from "@/hooks/useOrganization";
 import { ROLE_LABELS } from "@/features/dashboard/nav-config";
 import type { Role } from "@ams/shared";
+
+const ORG_NAME_STOPWORDS = new Set(["of", "the", "and", "&", "at", "for", "in"]);
+
+/** Shortens a long organization name to initials for compact sidebar display, e.g. "Vidyalankar Institute of technology, Mumbai" -> "VITM". */
+function abbreviateOrgName(name: string): string {
+  const words = name
+    .replace(/[(),]/g, "")
+    .split(/\s+/)
+    .filter((word) => word && !ORG_NAME_STOPWORDS.has(word.toLowerCase()));
+
+  if (words.length <= 1) {
+    return name.slice(0, 4).toUpperCase();
+  }
+
+  return words.map((word) => word[0]!.toUpperCase()).join("");
+}
 
 export function OrganizationSwitcher() {
   const navigate = useNavigate();
@@ -34,9 +52,16 @@ export function OrganizationSwitcher() {
           <Buildings className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">
-            {currentMembership.organizationName}
-          </p>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <p className="w-fit max-w-full truncate text-sm font-medium">
+                  {abbreviateOrgName(currentMembership.organizationName)}
+                </p>
+              }
+            />
+            <TooltipContent side="right">{currentMembership.organizationName}</TooltipContent>
+          </Tooltip>
           <p className="truncate text-xs text-sidebar-foreground/70">
             {ROLE_LABELS[currentMembership.role as Role]}
           </p>
@@ -56,9 +81,16 @@ export function OrganizationSwitcher() {
                   <Buildings className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="truncate text-sm font-medium">
-                    {currentMembership.organizationName}
-                  </p>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <p className="w-fit max-w-full truncate text-sm font-medium">
+                          {abbreviateOrgName(currentMembership.organizationName)}
+                        </p>
+                      }
+                    />
+                    <TooltipContent side="right">{currentMembership.organizationName}</TooltipContent>
+                  </Tooltip>
                   <p className="truncate text-xs text-sidebar-foreground/70">
                     {ROLE_LABELS[currentMembership.role as Role]}
                   </p>
@@ -68,7 +100,9 @@ export function OrganizationSwitcher() {
             }
           />
           <DropdownMenuContent align="start" className="w-64">
-            <DropdownMenuLabel>Your organizations</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Your organizations</DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             {memberships.map((membership) => (
               <DropdownMenuItem

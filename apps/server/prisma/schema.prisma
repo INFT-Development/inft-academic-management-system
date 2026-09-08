@@ -19,6 +19,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   memberships Membership[]
+  students    Student[]
 }
 
 model Organization {
@@ -28,6 +29,7 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   memberships Membership[]
+  students    Student[]
 }
 
 model Membership {
@@ -49,4 +51,30 @@ enum Role {
   ADMIN
   TEACHER
   STUDENT
+}
+
+model Student {
+  id              String   @id @default(uuid())
+  organizationId  String
+  userId          String?  @db.Uuid
+  rollNumber      String
+  studentFullName String
+  email           String?
+  year            String
+  semester        Int
+  division        String
+  branch          String
+  batch           Int
+  specialization  String?
+  status          String   @default("ACTIVE")
+  origin          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, rollNumber])
+  @@unique([organizationId, userId])
+  @@unique([organizationId, email])
 }

@@ -2,7 +2,8 @@ import { supabaseAdmin } from "../../config/supabase";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/AppError";
 import type { User } from "../../generated/prisma/client";
-import type { MembershipSummary } from "@ams/shared";
+import { Role, type MembershipSummary } from "@ams/shared";
+import { autoLinkStudentByEmail } from "../student/student.service";
 
 export interface RegisterInput {
   email: string;
@@ -77,18 +78,38 @@ export async function registerUser(
   }
 }
 
-async function getMemberships(userId: string): Promise<MembershipSummary[]> {
+async function getMemberships(userId: string, userEmail: string): Promise<MembershipSummary[]> {
   const memberships = await prisma.membership.findMany({
     where: { userId },
     include: { organization: true },
     orderBy: { createdAt: "asc" },
   });
 
+  const studentOrgIds = memberships
+    .filter((membership) => membership.role === Role.STUDENT)
+    .map((membership) => membership.organizationId);
+
+  // Auto-links any org where an admin pre-loaded this user's email, so a
+  // student never has to fill in the academic-details form themselves.
+  const linkedStudentOrgIds = new Set(
+    (
+      await Promise.all(
+        studentOrgIds.map(async (organizationId) => {
+          const student = await autoLinkStudentByEmail(organizationId, userId, userEmail);
+          return student ? organizationId : null;
+        })
+      )
+    ).filter((organizationId): organizationId is string => organizationId !== null)
+  );
+
   return memberships.map((membership) => ({
     id: membership.id,
     organizationId: membership.organizationId,
     organizationName: membership.organization.name,
     role: membership.role,
+    ...(membership.role === Role.STUDENT
+      ? { profileComplete: linkedStudentOrgIds.has(membership.organizationId) }
+      : {}),
   }));
 }
 
@@ -124,7 +145,7 @@ export async function loginUser(email: string, password: string) {
       id: dbUser.id,
       email: dbUser.email,
     },
-    memberships: await getMemberships(dbUser.id),
+    memberships: await getMemberships(dbUser.id, dbUser.email),
     accessToken: data.session.access_token,
     refreshToken: data.session.refresh_token,
   };
@@ -159,7 +180,7 @@ export async function refreshSession(refreshToken: string) {
       id: dbUser.id,
       email: dbUser.email,
     },
-    memberships: await getMemberships(dbUser.id),
+    memberships: await getMemberships(dbUser.id, dbUser.email),
     accessToken: data.session.access_token,
     refreshToken: data.session.refresh_token,
   };
@@ -179,7 +200,7 @@ export async function getCurrentUser(userId: string) {
       id: dbUser.id,
       email: dbUser.email,
     },
-    memberships: await getMemberships(dbUser.id),
+    memberships: await getMemberships(dbUser.id, dbUser.email),
   };
 }
 
