@@ -1,4 +1,3 @@
-// filepath: d:\Projects\inft-academic-management-system\apps\web\src\features\auth\useAuth.ts
 import { useContext } from "react";
 import { AuthContext } from "./auth-context";
 

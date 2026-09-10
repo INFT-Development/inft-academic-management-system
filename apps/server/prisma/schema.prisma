@@ -15,13 +15,66 @@ datasource db {
 model User {
   id        String   @id @db.Uuid
   email     String   @unique
-  role      Role     @default(STUDENT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  students    Student[]
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  students    Student[]
+}
+
+model Membership {
+  id             String   @id @default(uuid())
+  userId         String   @db.Uuid
+  organizationId String
+  role           Role
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   TEACHER
   STUDENT
+}
+
+model Student {
+  id              String   @id @default(uuid())
+  organizationId  String
+  userId          String?  @db.Uuid
+  rollNumber      String
+  studentFullName String
+  email           String?
+  year            String
+  semester        Int
+  division        String
+  branch          String
+  batch           Int
+  specialization  String?
+  status          String   @default("ACTIVE")
+  origin          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, rollNumber])
+  @@unique([organizationId, userId])
+  @@unique([organizationId, email])
 }

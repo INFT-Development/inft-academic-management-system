@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, type LoginInput } from "@ams/shared";
 
 import { loginUser } from "../auth.api";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,149 +16,110 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export function LoginForm() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [serverError, setServerError] = useState("");
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const form = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-
-    setError("");
-    setLoading(true);
+  async function onSubmit(values: LoginInput) {
+    setServerError("");
 
     try {
-      const response = await loginUser({
-        email,
-        password,
-      });
+      const response = await loginUser(values);
+      const { accessToken, refreshToken, user, memberships } = response.data;
 
-      const {
-        accessToken,
-        refreshToken,
-        user,
-      } = response.data;
+      login(accessToken, refreshToken, user, memberships);
 
-      // Store refresh token separately.
-      localStorage.setItem(
-        "refreshToken",
-        refreshToken,
-      );
-
-      // Update AuthContext.
-      login(accessToken,refreshToken, user);
-      
-      // Navigate after authentication state is updated.
-      navigate("/dashboard", {
-        replace: true,
-      });
+      navigate("/dashboard", { replace: true });
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Login failed",
-      );
-    } finally {
-      setLoading(false);
+      setServerError(error instanceof Error ? error.message : "Login failed");
     }
   }
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-2">
-        <CardTitle className="text-2xl font-semibold">
-          Welcome back
-        </CardTitle>
-
+        <CardTitle className="text-2xl font-semibold">Welcome back</CardTitle>
         <CardDescription>
-          Enter your email and password to sign in to your
-          account.
+          Enter your email and password to sign in to your account.
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-
-            <Input
-              id="email"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <FormField
+              control={form.control}
               name="email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">
-                Password
-              </Label>
-
-              <button
-                type="button"
-                className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            <Input
-              id="password"
+            <FormField
+              control={form.control}
               name="password"
-              type="password"
-              placeholder="Enter your password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          {error && (
-            <p className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
+            {serverError && (
+              <p className="text-sm text-destructive">{serverError}</p>
+            )}
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="font-medium text-foreground hover:underline"
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
             >
-              Create an account
-            </Link>
-          </p>
-        </form>
+              {form.formState.isSubmitting ? "Signing in..." : "Sign in"}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link to="/register" className="font-medium text-foreground hover:underline">
+                Create an account
+              </Link>
+            </p>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

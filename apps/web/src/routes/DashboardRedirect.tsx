@@ -1,16 +1,19 @@
 import { Navigate } from "react-router-dom";
 
-import { useAuth } from "@/hooks/useAuth";
-import {Role} from "@/constants/roles";
+import { useOrganization } from "@/hooks/useOrganization";
+import { Role } from "@/constants/roles";
 
 export function DashboardRedirect() {
-  const { user } = useAuth();
+  const { currentMembership } = useOrganization();
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (!currentMembership) {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  switch (user.role) {
+  switch (currentMembership.role) {
+    case Role.SUPER_ADMIN:
+      return <Navigate to="/dashboard/super-admin" replace />;
+
     case Role.ADMIN:
       return <Navigate to="/dashboard/admin" replace />;
 

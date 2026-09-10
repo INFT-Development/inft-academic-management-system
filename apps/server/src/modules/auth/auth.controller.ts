@@ -100,24 +100,14 @@ export async function me(
       throw new AppError("Authentication required", 401);
     }
 
+    const data = await authService.getCurrentUser(req.user.id);
+
     return res.status(200).json({
       success: true,
       message: "User retrieved successfully",
-      data: {
-        user: req.user,
-      },
+      data,
     });
   } catch (error) {
     next(error);
   }
-}
-
-export async function adminTest(req: Request, res: Response) {
-  return res.status(200).json({
-    success: true,
-    message: "You have admin access",
-    data: {
-      user: req.user,
-    },
-  });
 }

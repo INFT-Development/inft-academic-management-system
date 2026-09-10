@@ -6,6 +6,14 @@ jest.mock("../../src/config/prisma", () => ({
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    membership: {
+      findMany: jest.fn(),
+    },
+    student: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
   },
 }));
 
@@ -30,6 +38,8 @@ import { supabaseAdmin } from "../../src/config/supabase";
 
 const mockFindUnique = prisma.user.findUnique as jest.Mock;
 const mockCreate = prisma.user.create as jest.Mock;
+const mockFindManyMemberships = prisma.membership.findMany as jest.Mock;
+const mockFindManyStudents = prisma.student.findMany as jest.Mock;
 
 const mockCreateUser =
   supabaseAdmin.auth.admin.createUser as jest.Mock;
@@ -52,6 +62,10 @@ const mockSignOut =
 describe("Auth API", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // No memberships by default — most tests aren't about org context.
+    mockFindManyMemberships.mockResolvedValue([]);
+    mockFindManyStudents.mockResolvedValue([]);
   });
 
   // ============================================================
@@ -74,7 +88,7 @@ describe("Auth API", () => {
     expect(mockCreateUser).not.toHaveBeenCalled();
   });
 
-  it("should register a new student successfully", async () => {
+  it("should register a new user successfully", async () => {
     mockFindUnique.mockResolvedValue(null);
 
     mockCreateUser.mockResolvedValue({
@@ -90,7 +104,6 @@ describe("Auth API", () => {
     mockCreate.mockResolvedValue({
       id: "supabase-user-123",
       email: "student@test.com",
-      role: "STUDENT",
     });
 
     const response = await request(app)
@@ -111,7 +124,6 @@ describe("Auth API", () => {
     expect(response.body.data.user).toEqual({
       id: "supabase-user-123",
       email: "student@test.com",
-      role: "STUDENT",
     });
 
     expect(mockFindUnique).toHaveBeenCalledWith({
@@ -130,7 +142,6 @@ describe("Auth API", () => {
       data: {
         id: "supabase-user-123",
         email: "student@test.com",
-        role: "STUDENT",
       },
     });
   });
@@ -139,7 +150,6 @@ describe("Auth API", () => {
     mockFindUnique.mockResolvedValue({
       id: "existing-user-123",
       email: "existing@test.com",
-      role: "STUDENT",
     });
 
     const response = await request(app)
@@ -190,7 +200,6 @@ describe("Auth API", () => {
     mockFindUnique.mockResolvedValue({
       id: "supabase-user-123",
       email: "student@test.com",
-      role: "STUDENT",
     });
 
     const response = await request(app)
@@ -212,8 +221,8 @@ describe("Auth API", () => {
       user: {
         id: "supabase-user-123",
         email: "student@test.com",
-        role: "STUDENT",
       },
+      memberships: [],
       accessToken: "access-token-123",
       refreshToken: "refresh-token-123",
     });
@@ -307,7 +316,7 @@ describe("Auth API", () => {
   // /ME
   // ============================================================
 
-  it("should return the authenticated user from /me", async () => {
+  it("should return the authenticated user with their memberships from /me", async () => {
     mockGetUser.mockResolvedValue({
       data: {
         user: {
@@ -321,8 +330,16 @@ describe("Auth API", () => {
     mockFindUnique.mockResolvedValue({
       id: "supabase-user-123",
       email: "student@test.com",
-      role: "STUDENT",
     });
+
+    mockFindManyMemberships.mockResolvedValue([
+      {
+        id: "membership-1",
+        organizationId: "org-1",
+        role: "STUDENT",
+        organization: { name: "Demo Academy" },
+      },
+    ]);
 
     const response = await request(app)
       .get("/api/auth/me")
@@ -339,10 +356,20 @@ describe("Auth API", () => {
       "User retrieved successfully"
     );
 
-    expect(response.body.data.user).toEqual({
-      id: "supabase-user-123",
-      email: "student@test.com",
-      role: "STUDENT",
+    expect(response.body.data).toEqual({
+      user: {
+        id: "supabase-user-123",
+        email: "student@test.com",
+      },
+      memberships: [
+        {
+          id: "membership-1",
+          organizationId: "org-1",
+          organizationName: "Demo Academy",
+          role: "STUDENT",
+          profileComplete: false,
+        },
+      ],
     });
 
     expect(mockGetUser).toHaveBeenCalledWith(
@@ -443,120 +470,6 @@ describe("Auth API", () => {
   });
 
   // ============================================================
-  // ROLE AUTHORIZATION
-  // ============================================================
-
-  it("should allow an ADMIN to access /admin-test", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "admin-user-123",
-          email: "admin@test.com",
-        },
-      },
-      error: null,
-    });
-
-    mockFindUnique.mockResolvedValue({
-      id: "admin-user-123",
-      email: "admin@test.com",
-      role: "ADMIN",
-    });
-
-    const response = await request(app)
-      .get("/api/auth/admin-test")
-      .set(
-        "Authorization",
-        "Bearer admin-access-token"
-      );
-
-    expect(response.status).toBe(200);
-
-    expect(response.body.success).toBe(true);
-
-    expect(response.body.message).toBe(
-      "You have admin access"
-    );
-
-    expect(response.body.data.user).toEqual({
-      id: "admin-user-123",
-      email: "admin@test.com",
-      role: "ADMIN",
-    });
-  });
-
-  it("should reject a STUDENT from accessing /admin-test", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "student-user-123",
-          email: "student@test.com",
-        },
-      },
-      error: null,
-    });
-
-    mockFindUnique.mockResolvedValue({
-      id: "student-user-123",
-      email: "student@test.com",
-      role: "STUDENT",
-    });
-
-    const response = await request(app)
-      .get("/api/auth/admin-test")
-      .set(
-        "Authorization",
-        "Bearer student-access-token"
-      );
-
-    expect(response.status).toBe(403);
-
-    expect(response.body.success).toBe(false);
-  });
-
-  it("should reject a TEACHER from accessing /admin-test", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "teacher-user-123",
-          email: "teacher@test.com",
-        },
-      },
-      error: null,
-    });
-
-    mockFindUnique.mockResolvedValue({
-      id: "teacher-user-123",
-      email: "teacher@test.com",
-      role: "TEACHER",
-    });
-
-    const response = await request(app)
-      .get("/api/auth/admin-test")
-      .set(
-        "Authorization",
-        "Bearer teacher-access-token"
-      );
-
-    expect(response.status).toBe(403);
-
-    expect(response.body.success).toBe(false);
-  });
-
-  it("should reject /admin-test without authentication", async () => {
-    const response = await request(app)
-      .get("/api/auth/admin-test");
-
-    expect(response.status).toBe(401);
-
-    expect(response.body.success).toBe(false);
-
-    expect(response.body.message).toBe(
-      "Authentication required"
-    );
-  });
-
-  // ============================================================
   // REFRESH TOKEN
   // ============================================================
 
@@ -578,7 +491,6 @@ describe("Auth API", () => {
     mockFindUnique.mockResolvedValue({
       id: "student-user-123",
       email: "student@test.com",
-      role: "STUDENT",
     });
 
     const response = await request(app)
@@ -599,8 +511,8 @@ describe("Auth API", () => {
       user: {
         id: "student-user-123",
         email: "student@test.com",
-        role: "STUDENT",
       },
+      memberships: [],
       accessToken: "new-access-token",
       refreshToken: "new-refresh-token",
     });
@@ -674,7 +586,6 @@ describe("Auth API", () => {
     mockFindUnique.mockResolvedValue({
       id: "student-user-123",
       email: "student@test.com",
-      role: "STUDENT",
     });
 
     mockSignOut.mockResolvedValue({
@@ -728,7 +639,6 @@ describe("Auth API", () => {
     mockFindUnique.mockResolvedValue({
       id: "student-user-123",
       email: "student@test.com",
-      role: "STUDENT",
     });
 
     mockSignOut.mockResolvedValue({

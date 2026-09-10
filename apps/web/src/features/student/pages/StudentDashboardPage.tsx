@@ -1,25 +1,26 @@
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-export function StudentDashboardPage() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+import { Books } from "@phosphor-icons/react";
 
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
+import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/states";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/hooks/useAuth";
+
+export function StudentDashboardPage() {
+  const { currentMembership } = useOrganization();
+  const { user } = useAuth();
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">Student Dashboard</h1>
+    <div>
+      <PageHeader
+        title="Dashboard"
+        description={`Welcome, ${user?.email} — ${currentMembership!.organizationName}`}
+      />
 
-        <p className="mt-2 text-muted-foreground">Welcome, {user?.email}</p>
-        <Button onClick={handleLogout} variant="destructive" className="w-full">
-          Logout
-        </Button>
-      </div>
-    </main>
+      <EmptyState
+        icon={Books}
+        title="Courses are coming soon"
+        description="Your courses, attendance, and grades will appear here once they're available."
+      />
+    </div>
   );
 }

@@ -39,7 +39,6 @@ export async function authMiddleware(
     req.user = {
       id: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role,
     };
 
     next();

@@ -1,33 +1,38 @@
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-export function AdminDashboardPage() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+import { ChalkboardTeacher, Student } from "@phosphor-icons/react";
+import { Role } from "@ams/shared";
 
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
+import { PageHeader } from "@/components/layout/PageHeader";
+import { StatCard } from "@/components/layout/StatCard";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useMemberCounts } from "@/features/organization/useMemberCounts";
+
+const ROLES = [Role.TEACHER, Role.STUDENT];
+
+export function AdminDashboardPage() {
+  const { currentMembership } = useOrganization();
+  const { counts } = useMemberCounts(currentMembership!.organizationId, ROLES);
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">
-          Admin Dashboard
-        </h1>
+    <div>
+      <PageHeader
+        title="Dashboard"
+        description={`Welcome to ${currentMembership!.organizationName}.`}
+      />
 
-        <p className="mt-2 text-muted-foreground">
-          Welcome, {user?.email}
-        </p>
-        <Button
-              onClick={handleLogout}
-              variant="destructive"
-              className="w-full"
-            >
-              Logout
-            </Button>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Teachers"
+          value={counts[Role.TEACHER]}
+          icon={ChalkboardTeacher}
+          to="/dashboard/admin/teachers"
+        />
+        <StatCard
+          label="Students"
+          value={counts[Role.STUDENT]}
+          icon={Student}
+          to="/dashboard/admin/students"
+        />
       </div>
-    </main>
+    </div>
   );
 }
